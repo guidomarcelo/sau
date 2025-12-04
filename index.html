@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MINISTERIO DE DEFENSA</title>
+  <style>
+    :root{--bg:#f5f7f5;--fg:#172a1c;--primary:#2f855a;--border:#d9e2d6;--card:#ffffff}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#fff;border-bottom:1px solid var(--border);gap:12px}
+    .header-left{display:flex;align-items:center;gap:12px}
+    #header-banner{display:block;max-height:64px;height:64px;width:auto}
+    #header-alpha{display:block;max-height:48px;height:48px;width:auto}
+    .fab-help{position:fixed;right:18px;bottom:18px;background:var(--primary);color:#fff;border:0;border-radius:999px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;box-shadow:0 8px 20px rgba(0,0,0,.18);cursor:pointer;z-index:250}
+    .fab-help:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.22)}
+    .container{display:flex;min-height:calc(100vh - 58px)}
+    #sidebar{position:fixed;left:0;top:0;bottom:0;width:320px;background:var(--primary);color:#fff;border-right:0;padding:16px;transform:translateX(-100%);transition:transform .3s ease;z-index:250;box-shadow:6px 0 18px rgba(0,0,0,.12);overflow:auto}
+    #sidebar.show{transform:translateX(0)}
+    #sidebar h2{font-size:16px;margin:0 0 12px;color:#eaf5ee}
+    #sidebar label{display:block;margin:10px 0;color:#f1fbf5}
+    #sidebar input{width:100%;padding:10px;border:0;border-radius:8px;background:#ffffff;color:#173221;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+    #sidebar input::placeholder{color:#7aa68d}
+    #sidebar button{margin-top:12px;width:100%;background:#ffffff;color:var(--primary);border:1px solid #e0efe6;border-radius:10px;padding:12px;font-weight:600}
+    #sidebar button:hover{background:#e6f4ea}
+    main{flex:1;padding:18px;margin-left:0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:box-shadow .2s,transform .1s}
+    .card:hover{box-shadow:0 6px 22px rgba(0,0,0,.06);transform:translateY(-2px)}
+    .icon{font-size:28px}
+    .name{margin-top:6px;font-weight:600}
+    .empty{color:#6b7280;text-align:center;padding:30px}
+    section.block{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin:16px}
+    select,input[type=file]{padding:8px;border:1px solid var(--border);border-radius:6px}
+    button.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 10px;cursor:pointer}
+    button.danger{background:#fff;color:#b91c1c;border:1px solid #b91c1c;border-radius:8px;padding:8px 10px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid var(--border);padding:8px;text-align:left}
+    .report{display:none;position:fixed;inset:0;z-index:220;background:rgba(0,0,0,.25);backdrop-filter:blur(6px);align-items:center;justify-content:center}
+    .box{border:1px solid var(--border);border-radius:8px;padding:12px}
+    .report .box{width:520px;max-width:90vw;max-height:70vh;overflow:auto;background:#fff}
+    .action-btn{display:inline-block;padding:6px 8px;border:1px solid var(--primary);color:var(--primary);border-radius:8px;text-decoration:none;margin-right:6px}
+    .action-btn:hover{background:#e6f4ea}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:300}
+    .modal{background:#fff;border-radius:10px;min-width:320px;max-width:480px;padding:16px;border:1px solid var(--border)}
+    .modal h3{margin:0 0 10px;font-size:16px}
+    .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .ghost{background:#fff;color:#374151;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer}
+  </style>
+  <script>
+    const DOCUMENT_TYPES=["Informes","Oficios recibidos","Oficios expedidos","Actas","Notas de servicio","Documentación de respaldo","Testimonio","Ubicación","Folio Real","Catastro","Impuestos","Planos","Coordenadas","Contratos","Convenios","Procesos","Servicios","Formulario de asignación","Fotograma"];
+    let inmuebles=[];let documentos=[];let currentId=null;let reportVisible=false;let currentReport=null;
+    function uuid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+    function toggleSidebar(force){const sb=document.getElementById('sidebar');const show=force!==undefined?force:!sb.classList.contains('show');sb.classList.toggle('show',show)}
+    function renderTipos(){const sel=document.getElementById('tipo');sel.innerHTML='';DOCUMENT_TYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;sel.appendChild(o)})}
+    function renderGrid(){const grid=document.getElementById('grid');grid.innerHTML='';if(!inmuebles.length){grid.innerHTML='<div class="empty">Sin inmuebles registrados</div>';return}inmuebles.forEach(i=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<div class="icon">📁</div><div class="name">${i.nombre}</div>`;d.onclick=()=>openDocs(i.id);grid.appendChild(d)})}
+    function crearInmueble(nombre,ubicacion,distrito){const id=uuid();inmuebles.push({id,nombre,ubicacion:ubicacion||'',distrito:distrito||''});renderGrid();toggleSidebar(false)}
+    function getDocsLocal(inmuebleId){return documentos.filter(d=>d.inmuebleId===inmuebleId)}
+    function openDocs(id){currentId=id;const item=inmuebles.find(x=>x.id===id);document.getElementById('docs-title').textContent=item?item.nombre:'Documentos';document.getElementById('docs-section').style.display='block';cargarDocs();reportVisible=false;currentReport=null;document.getElementById('report').style.display='none'}
+    function cargarDocs(){if(!currentId)return;const docs=getDocsLocal(currentId);const tbody=document.querySelector('#docs tbody');tbody.innerHTML='';docs.forEach(d=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${d.tipo}</td><td>${d.originalname}</td><td>${(d.size/1024).toFixed(1)} KB</td><td><a class="action-btn" href="${d.url}" target="_blank">Abrir</a><a class="action-btn" href="${d.url}" download="${d.originalname}">Descargar</a></td>`;tbody.appendChild(tr)})}
+    async function subirDocumento(){if(!currentId)return alert('Seleccione un inmueble');const tipo=document.getElementById('tipo').value;const archivo=document.getElementById('archivo').files[0];if(!archivo)return alert('Seleccione archivo');const exists=getDocsLocal(currentId).filter(d=>d.tipo===tipo);let replace=false;if(exists.length){const ov=document.getElementById('replace-overlay');document.getElementById('replace-type').textContent=tipo;document.getElementById('replace-count').textContent=String(exists.length);ov.style.display='flex';await new Promise(resolve=>{const c=document.getElementById('replace-cancel');const ok=document.getElementById('replace-ok');function done(v){ov.style.display='none';c.removeEventListener('click',onC);ok.removeEventListener('click',onO);resolve(v)}function onC(){done(false)}function onO(){done(true)}c.addEventListener('click',onC);ok.addEventListener('click',onO)}).then(v=>replace=v);if(!replace)return;exists.forEach(d=>{URL.revokeObjectURL(d.url)});documentos=documentos.filter(d=>!(d.inmuebleId===currentId&&d.tipo===tipo))}
+      const url=URL.createObjectURL(archivo);documentos.push({id:uuid(),inmuebleId:currentId,tipo,originalname:archivo.name,size:archivo.size,url});document.getElementById('archivo').value='';cargarDocs();if(reportVisible){renderReport(buildReport(currentId))}}
+    function buildReport(inmuebleId){const docs=getDocsLocal(inmuebleId);const byType=DOCUMENT_TYPES.map(t=>({tipo:t,cantidad:docs.filter(d=>d.tipo===t).length}));return{porTipo:byType}}
+    function renderReport(rep){const list=document.getElementById('report-list');list.innerHTML='';rep.porTipo.forEach(x=>{const row=document.createElement('div');const status=x.cantidad>0?'✅':'⛔';row.textContent=`${status} ${x.tipo} (${x.cantidad})`;list.appendChild(row)})}
+    function toggleReport(){if(!currentId)return alert('Seleccione un inmueble');const cont=document.getElementById('report');const btn=document.getElementById('report-toggle');const next=!reportVisible;if(next&&!currentReport){const rep=buildReport(currentId);currentReport=rep;renderReport(rep)}cont.style.display=next?'flex':'none';reportVisible=next;btn.textContent=next?'Ocultar reporte':'Mostrar reporte'}
+    function requestDelete(){if(!currentId)return;const item=inmuebles.find(x=>x.id===currentId);const docs=getDocsLocal(currentId);document.getElementById('delete-name').textContent=item?item.nombre:'';document.getElementById('delete-count').textContent=String(docs.length);document.getElementById('confirm-overlay').style.display='flex'}
+    function performDelete(){const docs=getDocsLocal(currentId);docs.forEach(d=>URL.revokeObjectURL(d.url));documentos=documentos.filter(d=>d.inmuebleId!==currentId);inmuebles=inmuebles.filter(x=>x.id!==currentId);document.getElementById('confirm-overlay').style.display='none';currentId=null;document.getElementById('docs-section').style.display='none';renderGrid()}
+    function cancelDelete(){document.getElementById('confirm-overlay').style.display='none'}
+    function init(){renderTipos();document.getElementById('toggle-sidebar').addEventListener('click',()=>toggleSidebar());document.getElementById('crear').addEventListener('click',()=>{const nombre=document.getElementById('nombre').value.trim();const ubicacion=document.getElementById('ubicacion').value.trim();const distrito=document.getElementById('distrito').value.trim();if(!nombre)return alert('Nombre requerido');crearInmueble(nombre,ubicacion,distrito);document.getElementById('nombre').value='';document.getElementById('ubicacion').value='';document.getElementById('distrito').value=''});document.getElementById('subir').addEventListener('click',subirDocumento);document.getElementById('collect').addEventListener('click',()=>alert('Disponible en versión con servidor'));document.getElementById('report-toggle').addEventListener('click',toggleReport);document.getElementById('report-close').addEventListener('click',()=>{document.getElementById('report').style.display='none';reportVisible=false;document.getElementById('report-toggle').textContent='Mostrar reporte'});document.getElementById('delete').addEventListener('click',requestDelete);document.getElementById('cancel-delete').addEventListener('click',cancelDelete);document.getElementById('confirm-delete').addEventListener('click',performDelete)}
+    window.addEventListener('DOMContentLoaded',init)
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <img id="header-banner" src="../Captura%20de%20pantalla%202025-12-03%20232656.png" alt="MINISTERIO DE DEFENSA" />
+      <img id="header-alpha" src="../alpha-web-body.png" alt="" />
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="toggle-sidebar">Registrar inmueble</button>
+    </div>
+  </header>
+  <div class="container">
+    <div id="sidebar">
+      <h2>Registrar inmueble</h2>
+      <label>Nombre <input id="nombre" placeholder="Nombre" /></label>
+      <label>Ubicación <input id="ubicacion" placeholder="Ubicación" /></label>
+      <label>Distrito <input id="distrito" placeholder="Distrito" /></label>
+      <button id="crear">Crear</button>
+    </div>
+    <main>
+      <section class="block">
+        <div class="grid" id="grid"></div>
+      </section>
+      <section class="block" id="docs-section" style="display:none">
+        <h2 id="docs-title">Documentos</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label>Tipo <select id="tipo"></select></label>
+          <label>Archivo <input type="file" id="archivo" /></label>
+          <button class="secondary" id="subir">Subir documento</button>
+          <button class="secondary" id="collect">Recopilar y descargar</button>
+          <button class="secondary" id="report-toggle">Mostrar reporte</button>
+          <button class="danger" id="delete">Eliminar inmueble</button>
+        </div>
+        <table id="docs">
+          <thead><tr><th>Tipo</th><th>Nombre</th><th>Tamaño</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="report" id="report" style="display:none">
+          <div class="box">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <h3 style="margin:0;font-size:15px">Reporte</h3>
+              <button class="ghost" id="report-close">Cerrar</button>
+            </div>
+            <div id="report-list" style="margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="overlay" id="confirm-overlay">
+          <div class="modal">
+            <h3>Confirmar eliminación</h3>
+            <p>Esta acción eliminará el inmueble <strong id="delete-name"></strong> y <strong id="delete-count"></strong> documento(s) asociados. Esta operación no se puede deshacer.</p>
+            <div class="actions">
+              <button class="ghost" id="cancel-delete">Cancelar</button>
+              <button class="danger" id="confirm-delete">Eliminar</button>
+            </div>
+          </div>
+        </div>
+        <div class="overlay" id="replace-overlay">
+          <div class="modal">
+            <h3>Reemplazar documentos existentes</h3>
+            <p>Ya existe documento(s) del tipo <strong id="replace-type"></strong> (<strong id="replace-count"></strong>). Al reemplazar se eliminarán los anteriores.</p>
+            <div class="actions">
+              <button class="ghost" id="replace-cancel">Cancelar</button>
+              <button class="secondary" id="replace-ok">Reemplazar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
